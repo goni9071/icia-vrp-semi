@@ -1,0 +1,152 @@
+package kr.co.icia.vrp.semi.util;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import kr.co.icia.vrp.semi.util.kakao.Document;
+import kr.co.icia.vrp.semi.util.kakao.KakaoAddress;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Section.Road;
+import lombok.Getter;
+import lombok.Setter;
+
+public class KakaoApiUtil {
+  private static final String REST_API_KEY = "3963d4acc3e66c56c54f1c5090486820";
+
+  /**
+   * 키워드 장소 검색
+   * 
+   * @param address 주소
+   * @return 좌표
+   */
+  public static List<Point> getPointByKeyword(String keyword, Point center) throws IOException, InterruptedException {
+    HttpClient client = HttpClient.newHttpClient();
+    String url = "https://dapi.kakao.com/v2/local/search/keyword.json";
+    url += "?query=" + URLEncoder.encode(keyword, "UTF-8");
+    url += "&category_group_code=PM9";
+    url += "&x=" + center.getX();
+    url += "&y=" + center.getY();
+    HttpRequest request = HttpRequest.newBuilder()//
+        .header("Authorization", "KakaoAK " + REST_API_KEY)//
+        .uri(URI.create(url))//
+        .GET()//
+        .build();
+
+    System.out.println(request.headers());
+
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    String responseBody = response.body();
+    System.out.println(responseBody);
+
+    KakaoAddress kakaoAddress = new ObjectMapper().readValue(responseBody, KakaoAddress.class);
+    List<Document> documents = kakaoAddress.getDocuments();
+    if (documents.isEmpty()) {
+      return null;
+    }
+
+    List<Point> pointList = new ArrayList<>();
+    for (Document document : documents) {
+      Point point = new Point(document.getX(), document.getY());
+      point.setName(document.getPlaceName());
+      point.setPhone(document.getPhone());
+      point.setAdddress(document.getRoadAddressName());
+      point.setId(document.getId());
+      pointList.add(point);
+    }
+    return pointList;
+  }
+
+  /**
+   * 자동차 길찾기
+   * 
+   * @param from 출발지
+   * @param to   도착지
+   * @return 이동 좌표 목록
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public static List<Point> getVehiclePaths(Point from, Point to) throws IOException, InterruptedException {
+    HttpClient client = HttpClient.newHttpClient();
+    String url = "https://apis-navi.kakaomobility.com/v1/directions";
+    url += "?origin=" + from.getX() + "," + from.getY();
+    url += "&destination=" + to.getX() + "," + to.getY();
+    HttpRequest request = HttpRequest.newBuilder()//
+        .header("Authorization", "KakaoAK " + REST_API_KEY)//
+        .header("Content-Type", "application/json")//
+        .uri(URI.create(url))//
+        .GET()//
+        .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    String responseBody = response.body();
+
+    List<Point> pointList = new ArrayList<Point>();
+
+    KakaoDirections kakaoDirections = new ObjectMapper().readValue(responseBody, KakaoDirections.class);
+    List<Road> roads = kakaoDirections.getRoutes().get(0).getSections().get(0).getRoads();
+    for (Road road : roads) {
+      List<Double> vertexes = road.getVertexes();
+      for (int i = 0; i < vertexes.size(); i++) {
+        pointList.add(new Point(vertexes.get(i), vertexes.get(++i)));
+      }
+    }
+
+    return pointList;
+
+  }
+
+  /**
+   * 주소 -> 좌표 변환
+   * 
+   * @param address 주소
+   * @return 좌표
+   */
+  public static Point getPointByAddress(String address) throws IOException, InterruptedException {
+    HttpClient client = HttpClient.newHttpClient();
+    String url = "https://dapi.kakao.com/v2/local/search/address.json";
+    url += "?query=" + URLEncoder.encode(address, "UTF-8");
+    HttpRequest request = HttpRequest.newBuilder()//
+        .header("Authorization", "KakaoAK " + REST_API_KEY)//
+        .uri(URI.create(url))//
+        .GET()//
+        .build();
+
+    System.out.println(request.headers());
+
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    String responseBody = response.body();
+    System.out.println(responseBody);
+
+    KakaoAddress kakaoAddress = new ObjectMapper().readValue(responseBody, KakaoAddress.class);
+    List<Document> documents = kakaoAddress.getDocuments();
+    if (documents.isEmpty()) {
+      return null;
+    }
+    Document document = documents.get(0);
+    return new Point(document.getX(), document.getY());
+  }
+
+  @Setter
+  @Getter
+  public static class Point {
+    private Double x;
+    private Double y;
+    private String name;
+    private String phone;
+    private String adddress;
+    private String id;
+
+    public Point(Double x, Double y) {
+      this.x = x;
+      this.y = y;
+    }
+
+  }
+}
