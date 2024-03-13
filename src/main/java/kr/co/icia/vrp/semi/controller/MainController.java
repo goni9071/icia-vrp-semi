@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import kr.co.icia.vrp.semi.entity.Node;
 import kr.co.icia.vrp.semi.entity.NodeCost;
 import kr.co.icia.vrp.semi.parameter.NodeCostParam;
@@ -19,6 +21,11 @@ import kr.co.icia.vrp.semi.service.NodeService;
 import kr.co.icia.vrp.semi.util.JsonResult;
 import kr.co.icia.vrp.semi.util.KakaoApiUtil;
 import kr.co.icia.vrp.semi.util.KakaoApiUtil.Point;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Summary;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Section.Road;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Summary.Fare;
 
 @Controller
 public class MainController {
@@ -63,19 +70,36 @@ public class MainController {
       nodeCostParam.setEndNodeId(next.getId());
       NodeCost nodeCost = nodeCostService.getOneByParam(nodeCostParam);
       if (nodeCost == null) {
-        List<Point> vehiclePaths = KakaoApiUtil.getVehiclePaths(new Point(prev.getX(), next.getY()),
+        KakaoDirections kakaoDirections = KakaoApiUtil.getKakaoDirections(new Point(prev.getX(), next.getY()),
             new Point(next.getX(), next.getY()));
+        List<Route> routes = kakaoDirections.getRoutes();
+        Route route = routes.get(0);
+        List<Point> pathPointList = new ArrayList<Point>();
+        List<Road> roads = route.getSections().get(0).getRoads();
+        for (Road road : roads) {
+          List<Double> vertexes = road.getVertexes();
+          for (int q = 0; q < vertexes.size(); q++) {
+            pathPointList.add(new Point(vertexes.get(q), vertexes.get(++q)));
+          }
+        }
+        Summary summary = route.getSummary();
+        Integer distance = summary.getDistance();
+        Integer duration = summary.getDuration();
+        Fare fare = summary.getFare();
+        Integer taxi = fare.getTaxi();
+        Integer toll = fare.getToll();
+        
         nodeCost = new NodeCost();
         nodeCost.setStartNodeId(prev.getId());//시작노드id
         nodeCost.setEndNodeId(next.getId());//종료노드id
-        nodeCost.setDistanceMeter();//이동거리(미터)
-        nodeCost.setDurationSecond();//이동시간(초)
-        nodeCost.setTollFare();//통행 요금(톨게이트)
-        nodeCost.setTaxiFare();//택시 요금(지자체별, 심야, 시경계, 복합, 콜비 감안)
-        nodeCost.setFuelPrice();//해당 시점의 전국 평균 유류비와 연비를 감안한 유류비
-        nodeCost.setPathJson();//이동경로json [[x,y],[x,y]]
+        nodeCost.setDistanceMeter(distance.longValue());//이동거리(미터)
+        nodeCost.setDurationSecond(duration.longValue());//이동시간(초)
+        nodeCost.setTollFare(toll);//통행 요금(톨게이트)
+        nodeCost.setTaxiFare(taxi);//택시 요금(지자체별, 심야, 시경계, 복합, 콜비 감안)
+        nodeCost.setPathJson(new ObjectMapper().writeValueAsString(pathPointList));//이동경로json [[x,y],[x,y]]
         nodeCost.setRegDt(new Date());//등록일시
         nodeCost.setModDt(new Date());//수정일시
+        nodeCostService.add(nodeCost);
       }
     }
     return new JsonResult();
