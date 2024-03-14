@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import kr.co.icia.vrp.semi.entity.Node;
@@ -23,8 +24,9 @@ import kr.co.icia.vrp.semi.util.KakaoApiUtil;
 import kr.co.icia.vrp.semi.util.KakaoApiUtil.Point;
 import kr.co.icia.vrp.semi.util.kakao.KakaoDirections;
 import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route;
-import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Summary;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Section;
 import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Section.Road;
+import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Summary;
 import kr.co.icia.vrp.semi.util.kakao.KakaoDirections.Route.Summary.Fare;
 
 @Controller
@@ -61,6 +63,10 @@ public class MainController {
       }
       nodeList.add(node);
     }
+
+    int totalDistance = 0;
+    int totalDuration = 0;
+    List<Point> totalPathPointList = new ArrayList<>();
     for (int i = 1; i < nodeList.size(); i++) {
       Node prev = nodeList.get(i - 1);
       Node next = nodeList.get(i);
@@ -69,13 +75,21 @@ public class MainController {
       nodeCostParam.setStartNodeId(prev.getId());
       nodeCostParam.setEndNodeId(next.getId());
       NodeCost nodeCost = nodeCostService.getOneByParam(nodeCostParam);
+
       if (nodeCost == null) {
         KakaoDirections kakaoDirections = KakaoApiUtil.getKakaoDirections(new Point(prev.getX(), next.getY()),
             new Point(next.getX(), next.getY()));
         List<Route> routes = kakaoDirections.getRoutes();
         Route route = routes.get(0);
         List<Point> pathPointList = new ArrayList<Point>();
-        List<Road> roads = route.getSections().get(0).getRoads();
+        List<Section> sections = route.getSections();
+
+        if (sections == null) {
+          // {"trans_id":"018e3d7f7526771d9332cb717909be8f","routes":[{"result_code":104,"result_msg":"출발지와
+          // 도착지가 5 m 이내로 설정된 경우 경로를 탐색할 수 없음"}]}
+          continue;
+        }
+        List<Road> roads = sections.get(0).getRoads();
         for (Road road : roads) {
           List<Double> vertexes = road.getVertexes();
           for (int q = 0; q < vertexes.size(); q++) {
@@ -88,20 +102,30 @@ public class MainController {
         Fare fare = summary.getFare();
         Integer taxi = fare.getTaxi();
         Integer toll = fare.getToll();
-        
+
         nodeCost = new NodeCost();
-        nodeCost.setStartNodeId(prev.getId());//시작노드id
-        nodeCost.setEndNodeId(next.getId());//종료노드id
-        nodeCost.setDistanceMeter(distance.longValue());//이동거리(미터)
-        nodeCost.setDurationSecond(duration.longValue());//이동시간(초)
-        nodeCost.setTollFare(toll);//통행 요금(톨게이트)
-        nodeCost.setTaxiFare(taxi);//택시 요금(지자체별, 심야, 시경계, 복합, 콜비 감안)
-        nodeCost.setPathJson(new ObjectMapper().writeValueAsString(pathPointList));//이동경로json [[x,y],[x,y]]
-        nodeCost.setRegDt(new Date());//등록일시
-        nodeCost.setModDt(new Date());//수정일시
+        nodeCost.setStartNodeId(prev.getId());// 시작노드id
+        nodeCost.setEndNodeId(next.getId());// 종료노드id
+        nodeCost.setDistanceMeter(distance.longValue());// 이동거리(미터)
+        nodeCost.setDurationSecond(duration.longValue());// 이동시간(초)
+        nodeCost.setTollFare(toll);// 통행 요금(톨게이트)
+        nodeCost.setTaxiFare(taxi);// 택시 요금(지자체별, 심야, 시경계, 복합, 콜비 감안)
+        nodeCost.setPathJson(new ObjectMapper().writeValueAsString(pathPointList));// 이동경로json [[x,y],[x,y]]
+        nodeCost.setRegDt(new Date());// 등록일시
+        nodeCost.setModDt(new Date());// 수정일시
         nodeCostService.add(nodeCost);
       }
+
+      totalDistance += nodeCost.getDistanceMeter();
+      totalDuration += nodeCost.getDurationSecond();
+      totalPathPointList.addAll(new ObjectMapper().readValue(nodeCost.getPathJson(), new TypeReference<List<Point>>() {
+      }));
     }
-    return new JsonResult();
+    JsonResult jsonResult = new JsonResult();
+    jsonResult.addData("totalDistance", totalDistance);// 전체이동거리
+    jsonResult.addData("totalDuration", totalDuration);// 전체이동시간
+    jsonResult.addData("totalPathPointList", totalPathPointList);// 전체이동경로
+    jsonResult.addData("nodeList", nodeList);// 방문지목록
+    return jsonResult;
   }
 }

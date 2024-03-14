@@ -125,6 +125,7 @@ public class KakaoApiUtil {
         .build();
     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
     String responseBody = response.body();
+    System.out.println(responseBody);
 
     KakaoDirections kakaoDirections = new ObjectMapper().readValue(responseBody, KakaoDirections.class);
 
@@ -175,6 +176,10 @@ public class KakaoApiUtil {
     private String adddress;
     @JsonIgnore
     private String id;
+
+    public Point() {
+
+    }
 
     public Point(Double x, Double y) {
       this.x = x;
