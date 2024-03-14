@@ -15,7 +15,7 @@
       </svg>
       <span class="fs-5 fw-semibold">경로 최적화 결과</span>
     </div>
-   <div class="d-flex flex-wrap py-3 px-2 gap-3 align-items-center justify-content-center border-bottom">
+    <div class="d-flex flex-wrap py-3 px-2 gap-3 align-items-center justify-content-center border-bottom">
       <div class="d-flex flex-column align-items-center">
         <div id="totalVisit">0곳</div>
         <div class="fw-light" style="font-size:.75rem">경유지</div>
@@ -52,32 +52,32 @@
   // 주변 약국 검색
   function searchPoi() {
     // 지도의 중심좌표를 얻어옵니다 
-    var latlng = map.getCenter(); 
-    
+    var latlng = map.getCenter();
+
     const x = latlng.getLng();
     const y = latlng.getLat();
-    
+
     $.ajax({
-      url : '/poi',
-      data : {
-        x : x,
-        y : y
+      url: '/poi',
+      data: {
+        x: x,
+        y: y
       },
-      success : function(result) {
-        if(result.code != 'SUCC') {
+      success: function (result) {
+        if (result.code != 'SUCC') {
           alert("주변 약국 검색에 실패 하였습니다.");
           return;
         }
-        
+
         const data = result.data;
         displayData(data);
-        
+
       },
-      error : function() {
-        alert("주변 약국 검색에 실패 하였습니다."); 
+      error: function () {
+        alert("주변 약국 검색에 실패 하였습니다.");
       }
     });
- }
+  }
  
   // ajax 응답 받은 데이터로 화면에 그리기.
   const NODE_MAP = {};
