@@ -34,7 +34,7 @@
     <div class="list-group scrollarea px-3 flex-grow-1" id="nodeList">
     </div>
     <div class="d-flex align-items-center justify-content-center p-3">
-      <button type="button" class="btn btn-dark w-100">경로 최적화</button>
+      <button type="button" class="btn btn-dark w-100" onclick="goVrp();">경로 최적화</button>
     </div>
   </div>
   <div id="map" class="w-100"></div>
@@ -81,6 +81,8 @@
  
   // ajax 응답 받은 데이터로 화면에 그리기.
   const NODE_MAP = {};
+  const MARKER_MAP = {};
+  const INFO_MAP = {};
   function displayData(data) {
     clearNode();
     const totalDistance = data.totalDistance;// 전체이동거리(미터)
@@ -150,8 +152,8 @@
       removable: true
     });
     
-    node.infowindow = infowindow;
-    node.marker = marker;
+    MARKER_MAP[node.id] = marker;
+    INFO_MAP[node.id] = infowindow;
 
     // 마커에 클릭이벤트를 등록합니다
     kakao.maps.event.addListener(marker, 'click', function () {
@@ -185,7 +187,7 @@
   function panTo(nodeId) {
     clearInfoWindow();
     const node = NODE_MAP[nodeId];
-    node.infowindow.open(map, node.marker);
+    INFO_MAP[nodeId].open(map, MARKER_MAP[nodeId]);
     // 이동할 위도 경도 위치를 생성합니다 
     var moveLatLon = new kakao.maps.LatLng(node.y, node.x);
 
@@ -194,22 +196,46 @@
     map.panTo(moveLatLon);
   }
   function clearInfoWindow() {
-    for(const nodeId in NODE_MAP) {
-      NODE_MAP[nodeId].infowindow.close();
+    for(const nodeId in INFO_MAP) {
+      INFO_MAP[nodeId].close();
     }
   }      
   function clearNode() {
     for(const nodeId in NODE_MAP) {
-      NODE_MAP[nodeId].marker.setMap(null);
-      NODE_MAP[nodeId].marker = null;
-      NODE_MAP[nodeId].infowindow.close();
-      NODE_MAP[nodeId].infowindow = null;
+      MARKER_MAP[nodeId].setMap(null);
+      MARKER_MAP[nodeId] = null;
+      INFO_MAP[nodeId].close();
+      INFO_MAP[nodeId] = null;
+      delete MARKER_MAP[nodeId];
+      delete INFO_MAP[nodeId];
       delete NODE_MAP[nodeId];
     }
     if(POLYLINE) {
       POLYLINE.setMap(null);
       POLYLINE = null;
     }
-  }        
+  }      
+  
+  function goVrp() {
+    $.ajax({
+      url: '/vrp',
+      type : 'post',
+      contentType : "application/json",
+      data: JSON.stringify(Object.values(NODE_MAP)),
+      success: function (result) {
+        if (result.code != 'SUCC') {
+          alert("경로 최적화에 실패 하였습니다.");
+          return;
+        }
+
+        const data = result.data;
+        displayData(data);
+
+      },
+      error: function () {
+        alert("경로 최적화에 실패 하였습니다.");
+      }
+    });
+  }  
 
 </script>
