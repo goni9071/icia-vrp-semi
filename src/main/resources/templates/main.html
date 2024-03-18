@@ -40,6 +40,72 @@
   <div id="map" class="w-100"></div>
   <button type="button" class="btn btn-success" style="position: fixed; top: 20px; right: 20px; z-index: 1030;" onclick="searchPoi();">주변 약국 검색</button>
 </main>
+<div class="w-100 h-100 fixed-top justify-content-center align-items-center bg-opacity-10 bg-success" id="spin" style="display:none;">
+ <div class="spiASnner-border text-primary" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-border text-secondary" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-border text-success" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-border text-danger" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-border text-warning" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-border text-info" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-border text-light" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-border text-dark" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-primary" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-secondary" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-success" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-danger" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-warning" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-info" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-light" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <div class="spinner-grow text-dark" role="status">
+   <span class="visually-hidden">Loading...</span>
+ </div>
+ <button class="btn btn-primary" type="button" disabled>
+   <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+   <span class="visually-hidden" role="status">Loading...</span>
+ </button>
+ <button class="btn btn-primary" type="button" disabled>
+   <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+   <span role="status">Loading...</span>
+ </button>
+ <button class="btn btn-primary" type="button" disabled>
+   <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
+   <span class="visually-hidden" role="status">Loading...</span>
+ </button>
+ <button class="btn btn-primary" type="button" disabled>
+   <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
+   <span role="status">Loading...</span>
+ </button>
+</div>
 <script>
   var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
   mapOption = { 
@@ -49,6 +115,15 @@
   
   var map = new kakao.maps.Map(mapContainer, mapOption); // 지도를 생성합니다
  
+  function spinOn() {
+    $("#spin").addClass("d-flex");
+  }
+  function spinOff() {
+    $("#spin").removeClass("d-flex");
+  }
+
+
+
   // 주변 약국 검색
   function searchPoi() {
     // 지도의 중심좌표를 얻어옵니다 
@@ -56,7 +131,8 @@
 
     const x = latlng.getLng();
     const y = latlng.getLat();
-
+    
+    spinOn();
     $.ajax({
       url: '/poi',
       data: {
@@ -66,6 +142,7 @@
       success: function (result) {
         if (result.code != 'SUCC') {
           alert("주변 약국 검색에 실패 하였습니다.");
+          spinOff();
           return;
         }
 
@@ -75,6 +152,7 @@
       },
       error: function () {
         alert("주변 약국 검색에 실패 하였습니다.");
+        spinOff();
       }
     });
   }
@@ -121,6 +199,7 @@
       map.setBounds(bounds);
     }
     $("#nodeList").html(html);
+    spinOff();
   }
  
   function secondsToHoursMinutes(seconds) {
@@ -216,7 +295,8 @@
     }
   }      
   
-  function goVrp() {
+  function goVrp() {    
+    spinOn();
     $.ajax({
       url: '/vrp',
       type : 'post',
@@ -225,6 +305,7 @@
       success: function (result) {
         if (result.code != 'SUCC') {
           alert("경로 최적화에 실패 하였습니다.");
+          spinOff();
           return;
         }
 
@@ -234,6 +315,7 @@
       },
       error: function () {
         alert("경로 최적화에 실패 하였습니다.");
+        spinOff();
       }
     });
   }  
