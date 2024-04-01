@@ -25,7 +25,7 @@ public class VrpService {
   private Map<String/* vehicleId */, VehicleImpl.Builder> vehicleBuilderMap = new HashMap<String, VehicleImpl.Builder>();
   private Map<String/* shipmentId */, Shipment.Builder> shipmentBuilderMap = new HashMap<String, Shipment.Builder>();
   private VehicleRoutingTransportCostsMatrix.Builder costMatrixBuilder = VehicleRoutingTransportCostsMatrix.Builder
-      .newInstance(true);
+      .newInstance(false);
 
   /**
    * 차량 등록
@@ -252,7 +252,9 @@ public class VrpService {
 
     // build the problem
     com.graphhopper.jsprit.core.algorithm.box.Jsprit.Builder jspritBuilder = Jsprit.Builder.newInstance(vrp);//
-    VehicleRoutingAlgorithm algorithm = jspritBuilder.buildAlgorithm();
+    VehicleRoutingAlgorithm algorithm = jspritBuilder//
+        .setProperty("iterations", "2000")//
+        .buildAlgorithm();
 
     Collection<VehicleRoutingProblemSolution> solutions = algorithm.searchSolutions();
     VehicleRoutingProblemSolution bestSolution = Solutions.bestOf(solutions);

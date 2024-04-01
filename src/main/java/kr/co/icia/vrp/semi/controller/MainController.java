@@ -206,13 +206,28 @@ public class MainController {
     List<Node> vrpNodeList = new ArrayList<>();
 
     VrpResult vrpResult = vrpService.getVrpResult();
-
+    
+    String prevLocationId = null;
     for (VrpVehicleRoute vrpVehicleRoute : vrpResult.getVrpVehicleRouteList()) {
-      if ("deliverShipment".equals(vrpVehicleRoute.getActivityName())) {
-        String locationId = vrpVehicleRoute.getLocationId();
-        vrpNodeList.add(nodeMap.get(locationId));
-      }
       System.out.println(vrpVehicleRoute);
+//    모든 약을 시작점에서 픽업 한 경우만 정상 동작 하는 코드. 
+//      if ("deliverShipment".equals(vrpVehicleRoute.getActivityName())) {
+//        String locationId = vrpVehicleRoute.getLocationId();
+//        vrpNodeList.add(nodeMap.get(locationId));
+//      }
+      
+      // 수정 된 코드
+      // 시작 약국에서 픽업 몇개하고 배송 후 다시 픽업해도 되는 코드
+      String locationId = vrpVehicleRoute.getLocationId();
+      if (prevLocationId == null) {
+        prevLocationId = locationId;
+      } else if (locationId.equals(prevLocationId)) {
+        continue;
+      }
+
+      prevLocationId = locationId;
+      vrpNodeList.add(nodeMap.get(locationId));
+
     }
 
     int totalDistance = 0;
